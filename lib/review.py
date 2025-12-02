@@ -101,7 +101,18 @@ class Review:
     def instance_from_db(cls, row):
         """Return an Review instance having the attribute values from the table row."""
         # Check the dictionary for  existing instance using the row's primary key
-        pass
+        review = cls.all.get(row[0])
+        if review:
+            # ensure attributes match row values in case local instance was modified
+            review.year = row[1]
+            review.summary = row[2]
+            review.employee_id = row[3]
+        else:
+            # not in dictionary, create new instance and add to dictionary
+            review = cls(row[1], row[2], row[3])
+            review.id = row[0]
+            cls.all[review.id] = review
+        return review
    
 
     @classmethod
@@ -117,7 +128,15 @@ class Review:
 
     def update(self):
         """Update the table row corresponding to the current Review instance."""
-        pass
+        sql = """
+            UPDATE reviews
+            SET year = ?, summary = ?, employee_id = ?
+            WHERE id = ?
+        """
+        CURSOR.execute(sql, (self.year, self.summary, self.employee_id, self.id))
+        CONN.commit()
+        # ensure the cached object reflects the updated values
+        type(self).all[self.id] = self
 
     def delete(self):
         """Delete the table row corresponding to the current Review instance,
@@ -138,5 +157,12 @@ class Review:
     @classmethod
     def get_all(cls):
         """Return a list containing one Review instance per table row"""
-        pass
+        sql = """
+            SELECT *
+            FROM reviews
+        """
+
+        rows = CURSOR.execute(sql).fetchall()
+
+        return [cls.instance_from_db(row) for row in rows]
 
